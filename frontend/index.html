@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KütüphaneNet - DDO Case</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f9; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h1 { color: #333; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>KütüphaneNet Yönetim Paneli</h1>
+        <p>Sistem API'sine başarıyla bağlandınız. Veritabanı ve sunucu aktif.</p>
+        <button onclick="checkHealth()">Sistem Durumunu Kontrol Et</button>
+        <p id="result"></p>
+    </div>
+
+    <script>
+        async function checkHealth() {
+            try {
+                // API'mize istek atıyoruz
+                const response = await fetch('http://localhost:8080/health');
+                const data = await response.json();
+                document.getElementById('result').innerText = "API Durumu: " + data.status;
+            } catch (error) {
+                document.getElementById('result').innerText = "API'ye ulaşılamadı!";
+            }
+        }
+    </script>
+</body>
+</html>
