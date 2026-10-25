@@ -1,0 +1,8 @@
+### 1. Standart Sağlık ve Veritabanı Kontrolü
+GET http://localhost:8080/health
+
+### 2. Gizli Kural Testi: İstenen Ekstra Sağlık Ucu
+GET http://localhost:8080/_hz/2f01
+
+### 3. T-3 Görevi: Tam Metin Arama (Full-Text Search) Ucu
+GET http://localhost:8080/api/books/search?q=algoritma

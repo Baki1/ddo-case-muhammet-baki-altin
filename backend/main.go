@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -66,20 +67,26 @@ func main() {
 		for rows.Next() {
 			var id int
 			var title, author, isbn string
-			if err := rows.Scan(&id, &title, &author, &isbn); err == nil {
-				results = append(results, map[string]interface{}{
-					"id": id, "title": title, "author": author, "isbn": isbn,
-				})
+			if err := rows.Scan(&id, &title, &author, &isbn); err != nil {
+				http.Error(w, `{"error":{"code":"INTERNAL_ERROR","message":"Veritabanı hatası"}}`, http.StatusInternalServerError)
+				return
 			}
+			results = append(results, map[string]interface{}{
+				"id": id, "title": title, "author": author, "isbn": isbn,
+			})
 		}
 
-		if results == nil {
-			fmt.Fprintln(w, "[]")
+		if err := rows.Err(); err != nil {
+			http.Error(w, `{"error":{"code":"INTERNAL_ERROR","message":"Veritabanı hatası"}}`, http.StatusInternalServerError)
 			return
 		}
 
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, `{"status":"success", "count": %d}`, len(results))
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status": "success",
+			"count":  len(results),
+			"books":  results,
+		})
 	})
 
 	mux.HandleFunc("/_hz/2f01", func(w http.ResponseWriter, r *http.Request) {
