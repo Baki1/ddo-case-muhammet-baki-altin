@@ -37,7 +37,7 @@ docker compose up --build -d
 Açıkçası en çok zorlandığım kısım Go dili ve Docker mimarisini sıfırdan kurup birbiriyle haberleştirmekti. Bildiğim yoldan gidip Python ile yazmayı düşünebilirdim ama proje gereksinimlerinde Go (1.22+) ve PostgreSQL zorunlu tutulduğu için bu kurallara sadık kaldım. Kısıtlı vakitte veritabanı mimarisine ve sizlerin koda gizlediği yönergelere odaklanmayı seçtim.
 
 **2. Çözümünün kırıldığı ya da yetersiz kaldığı bir senaryo bul ve nedenini açıkla.**
-Frontend (önyüz) kısmı şu an yetersiz. İçeride çalışan çok sağlam bir veritabanı mimarisi (tam metin arama, rezervasyon kuyruğu vb.) kurdum ama zaman kısıtından dolayı bunu görsel bir web sitesine dökemedim. Frontend şu an sadece sistemin API ile konuştuğunu kanıtlayan basit bir arayüzden ibaret.
+Frontend (önyüz) kısmı şu an yetersiz. İçeride çalışan çok sağlam bir veritabanı mimarisi (tam metin arama, rezervasyon kuyruğu vb.) kurdum ama zaman kısıtından dolayı bunu görsel bir web sitesine dökemedim. Frontend şu an sadece sistemin API ile konuştuğunu kanıtlayan basit bir arayüzden ibaret. Not: Son güncellemede önyüzü geliştirerek rol seçici, canlı istatistik kartları, tam metin arama, ödünç/iade ve nüsha durum makinesi panellerini ekledim; ancak bilinen sınırlama olarak rol geçişleri şu an istemci tarafında simüle edilmektedir, tam kapsamlı bir üretim ortamında bunun JWT/Oturum çerezleriyle sunucu tarafında zorlanması gerekir.
 
 **3. Veritabanına eklediğin dizinlerden ikisini seç: hangi sorgu için, dizinsiz/dizinli ölçüm farkı nedir?**
 1. **`yn-books` üzerindeki `search_vector` (GIN İndeksi) ve `pg_trgm` İndeksi:**

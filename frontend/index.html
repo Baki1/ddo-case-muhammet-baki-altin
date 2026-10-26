@@ -3,81 +3,322 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KütüphaneNet - DDO Case</title>
-    <style>
-        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f9; color: #222; }
-        .container { max-width: 900px; margin: auto; background: white; padding: 24px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
-        .card { border: 1px solid #e2e8f0; border-radius: 6px; padding: 14px; margin-top: 14px; background: #fafafa; }
-        input, button { padding: 8px 12px; border-radius: 4px; border: 1px solid #cbd5e1; font-size: 14px; }
-        button { background-color: #2563eb; color: white; border: none; cursor: pointer; }
-        button:hover { background-color: #1d4ed8; }
-        .badge { display: inline-block; padding: 3px 8px; background: #dbeafe; color: #1e40af; border-radius: 4px; font-size: 12px; }
-    </style>
+    <title>KütüphaneNet — Üniversite Kütüphane Yönetim Sistemi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <div class="container">
-        <h1>KütüphaneNet Yönetim Paneli</h1>
-        <p>Üniversite Kütüphane Katalog, Tam Metin Arama ve Ödünç Sistemi</p>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col">
 
-        <div class="card">
-            <button onclick="checkHealth()">Sistem ve Veritabanı Durumunu Kontrol Et</button>
-            <span id="result" style="margin-left:10px; font-weight:bold;"></span>
+    <!-- Üst Bar & Rol Seçici -->
+    <header class="bg-indigo-950 text-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-indigo-600 p-2 rounded-lg font-bold text-xl">KN</div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-wide">KütüphaneNet Yönetim Sistemi</h1>
+                    <p class="text-xs text-indigo-300">Katalog · Ödünç & Ceza · Rezervasyon Kuyruğu · Envanter</p>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-3 w-full md:w-auto justify-between md:justify-end">
+                <div id="healthBadge" class="text-xs px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                    Sistem kontrol ediliyor...
+                </div>
+                <div class="flex items-center gap-2 text-xs">
+                    <span class="text-indigo-200">Aktif Rol:</span>
+                    <select id="roleSwitcher" onchange="applyRoleView()" class="bg-indigo-900 border border-indigo-700 text-white rounded px-2.5 py-1.5 font-medium focus:outline-none">
+                        <option value="yonetici">Yönetici (seed.kayin@ddo-case.invalid)</option>
+                        <option value="kutuphaneci">Kütüphaneci (personel@ddo-case.invalid)</option>
+                        <option value="ogrenci">Üye - Öğrenci (ogrenci@ddo-case.invalid)</option>
+                        <option value="akademisyen">Üye - Akademisyen (akademisyen@ddo-case.invalid)</option>
+                        <option value="satinalma">Satın Alma Sorumlusu (satinalma@ddo-case.invalid)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Ana İçerik -->
+    <main class="max-w-7xl mx-auto px-4 py-6 flex-1 w-full space-y-6">
+
+        <!-- Dinamik Bildirim Çubuğu (Hata / Başarı / Yükleniyor) -->
+        <div id="alertBox" class="hidden rounded-lg p-3.5 text-sm font-medium border flex justify-between items-center">
+            <span id="alertText"></span>
+            <button onclick="document.getElementById('alertBox').classList.add('hidden')" class="text-xs underline ml-4">Kapat</button>
         </div>
 
-        <div class="card">
-            <h3>Türkçe Tam Metin Kitap Arama (T-3)</h3>
-            <input id="searchInput" type="text" value="algoritma" placeholder="Başlık, yazar veya konu ara..." style="width: 65%;">
-            <button onclick="searchBooks()">Katalogda Ara</button>
-            <div id="bookList" style="margin-top: 12px;"></div>
-        </div>
+        <!-- F-7: Canlı Rapor ve İstatistik Kartları -->
+        <section class="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <div class="text-xs text-slate-500 font-medium">Katalog Eser Sayısı</div>
+                <div id="repBooks" class="text-2xl font-bold text-slate-800 mt-1">...</div>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <div class="text-xs text-slate-500 font-medium">Kayıtlı Üye</div>
+                <div id="repUsers" class="text-2xl font-bold text-slate-800 mt-1">...</div>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <div class="text-xs text-slate-500 font-medium">Aktif Ödünç (Nüsha)</div>
+                <div id="repLoans" class="text-2xl font-bold text-indigo-600 mt-1">...</div>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <div class="text-xs text-slate-500 font-medium">Rezervasyon Kuyruğu</div>
+                <div id="repRes" class="text-2xl font-bold text-amber-600 mt-1">...</div>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 col-span-2 md:col-span-1">
+                <div class="text-xs text-slate-500 font-medium">Toplam Ceza (Kuruş/TL)</div>
+                <div id="repFines" class="text-2xl font-bold text-rose-600 mt-1">...</div>
+            </div>
+        </section>
 
-        <div class="card">
-            <h3>Hızlı Ödünç Verme (T-1)</h3>
-            <input id="userId" type="number" value="2" placeholder="Üye ID" style="width: 100px;">
-            <input id="barcode" type="text" value="BC-1001" placeholder="Barkod (Örn: BC-1001)">
-            <button onclick="borrowBook()">Ödünç Ver</button>
-            <div id="loanResult" style="margin-top: 8px; font-size: 14px;"></div>
-        </div>
-    </div>
+        <!-- T-3 & F-5: Türkçe Tam Metin Arama ve Katalog Listesi -->
+        <section class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 space-y-4">
+            <div class="flex flex-col md:flex-row justify-between md:items-center gap-2 border-b pb-3">
+                <div>
+                    <h2 class="font-bold text-base text-slate-900">Katalog ve Türkçe Tam Metin Arama (T-3 / F-1 / F-5)</h2>
+                    <p class="text-xs text-slate-500">PostgreSQL GIN (tsvector) + Trigram (pg_trgm) destekli hızlı arama</p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="quickSearch('algoritma')" class="text-xs bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded">Örnek: "algoritma"</button>
+                    <button onclick="quickSearch('saatleri')" class="text-xs bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded">Örnek: "saatleri"</button>
+                    <button onclick="loadAllBooks()" class="text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-2.5 py-1 rounded font-medium">Tümünü Listele</button>
+                </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-2">
+                <input id="searchInput" type="text" value="algoritma" placeholder="Kitap adı, yazar, konu veya ISBN ile arayın..." class="flex-1 border border-slate-300 rounded-lg px-3.5 py-2 text-sm focus:outline-none focus:border-indigo-600" />
+                <button onclick="searchBooks()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg text-sm font-medium transition">Katalogda Ara</button>
+            </div>
+
+            <!-- Yükleniyor / Boş / Sonuç Alanı -->
+            <div id="searchStatus" class="text-xs text-slate-500"></div>
+            <div id="bookGrid" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+        </section>
+
+        <!-- İşlem Panelleri (Role Göre Dinamik Gösterilir) -->
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+            <!-- T-1 & F-2 & F-4: Ödünç Verme & İade / Ceza Hesabı (Kütüphaneci & Yönetici) -->
+            <div id="panelLoan" class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 space-y-4">
+                <div class="border-b pb-2">
+                    <span class="text-xs font-semibold bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded">Görev 1 (T-1) · F-2 · F-4</span>
+                    <h3 class="font-bold text-base mt-1">Barkod ile Ödünç Verme & İade / Ceza</h3>
+                    <p class="text-xs text-slate-500">Eşzamanlı kilit (FOR UPDATE) ve kuruş bazlı ceza kontrolü</p>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="text-xs font-semibold text-slate-600">1. Nüsha Ödünç Ver</label>
+                    <div class="flex gap-2">
+                        <input id="loanUserId" type="number" value="2" placeholder="Üye ID" class="w-24 border rounded-lg px-3 py-1.5 text-sm" />
+                        <input id="loanBarcode" type="text" value="BC-1001" placeholder="Barkod (BC-1001)" class="flex-1 border rounded-lg px-3 py-1.5 text-sm" />
+                        <button onclick="borrowCopy()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-1.5 rounded-lg text-sm font-medium">Ödünç Ver</button>
+                    </div>
+                </div>
+
+                <div class="space-y-2 pt-2 border-t">
+                    <label class="text-xs font-semibold text-slate-600">2. Kitap İade Al & Kuruş Ceza Hesapla</label>
+                    <div class="flex gap-2">
+                        <input id="returnLoanId" type="number" value="1" placeholder="Ödünç ID (Loan ID)" class="flex-1 border rounded-lg px-3 py-1.5 text-sm" />
+                        <button onclick="returnCopy()" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-1.5 rounded-lg text-sm font-medium">İade Al</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- T-2 & F-3: Rezervasyon Kuyruğu (Tüm Roller) -->
+            <div id="panelRes" class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 space-y-4">
+                <div class="border-b pb-2">
+                    <span class="text-xs font-semibold bg-amber-100 text-amber-800 px-2 py-0.5 rounded">Görev 2 (T-2) · F-3</span>
+                    <h3 class="font-bold text-base mt-1">Rezervasyon Kuyruğu Oluşturma</h3>
+                    <p class="text-xs text-slate-500">Nüsha iade edildiğinde sıradaki ilk üyeye 3 gün (72 saat) ayrılır</p>
+                </div>
+
+                <div class="space-y-3">
+                    <div class="flex gap-2">
+                        <input id="resBookId" type="number" value="1" placeholder="Kitap ID (Örn: 1)" class="w-1/2 border rounded-lg px-3 py-1.5 text-sm" />
+                        <input id="resUserId" type="number" value="2" placeholder="Üye ID (Örn: 2)" class="w-1/2 border rounded-lg px-3 py-1.5 text-sm" />
+                    </div>
+                    <button onclick="createReservation()" class="w-full bg-amber-600 hover:bg-amber-700 text-white py-2 rounded-lg text-sm font-medium">Rezervasyon Kuyruğuna Gir</button>
+                </div>
+            </div>
+
+            <!-- T-4 & F-6: Envanter Sayımı ve Durum Makinesi (Kütüphaneci & Yönetici) -->
+            <div id="panelInventory" class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 space-y-4">
+                <div class="border-b pb-2">
+                    <span class="text-xs font-semibold bg-rose-100 text-rose-800 px-2 py-0.5 rounded">Görev 4 (T-4) · F-6</span>
+                    <h3 class="font-bold text-base mt-1">Envanter ve Nüsha Durum Makinesi</h3>
+                    <p class="text-xs text-slate-500">Kural: Ödünçteki ('borrowed') bir nüsha 'lost' (kayıp) olarak işaretlenemez!</p>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-2">
+                    <input id="statusCopyId" type="number" value="1" placeholder="Nüsha ID (1)" class="w-28 border rounded-lg px-3 py-1.5 text-sm" />
+                    <select id="statusSelect" class="flex-1 border rounded-lg px-3 py-1.5 text-sm">
+                        <option value="lost">lost (Kayıp Olarak İşaretle)</option>
+                        <option value="available">available (Rafta Mevcut)</option>
+                        <option value="reserved">reserved (Rezerve)</option>
+                    </select>
+                    <button onclick="changeCopyStatus()" class="bg-rose-600 hover:bg-rose-700 text-white px-4 py-1.5 rounded-lg text-sm font-medium">Durumu Güncelle</button>
+                </div>
+            </div>
+
+            <!-- F-1: Yeni Eser ve Barkod Kaydı (Satın Alma, Kütüphaneci, Yönetici) -->
+            <div id="panelCatalogAdd" class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 space-y-4">
+                <div class="border-b pb-2">
+                    <span class="text-xs font-semibold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">Kapsam F-1 · Satın Alma & Katalog</span>
+                    <h3 class="font-bold text-base mt-1">Kataloğa Yeni Eser & Fiziksel Nüsha Ekle</h3>
+                    <p class="text-xs text-slate-500">Eklendiği anda Türkçe FTS trigger'ı vektörü otomatik hesaplar</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <input id="newTitle" type="text" placeholder="Kitap Başlığı" class="border rounded-lg px-3 py-1.5 text-sm col-span-2" />
+                    <input id="newAuthor" type="text" placeholder="Yazar" class="border rounded-lg px-3 py-1.5 text-sm" />
+                    <input id="newSubject" type="text" placeholder="Konu (Örn: Tarih)" class="border rounded-lg px-3 py-1.5 text-sm" />
+                    <input id="newIsbn" type="text" placeholder="ISBN (13 Hane)" class="border rounded-lg px-3 py-1.5 text-sm" />
+                    <input id="newBarcode" type="text" placeholder="İlk Nüsha Barkodu (BC-2001)" class="border rounded-lg px-3 py-1.5 text-sm" />
+                </div>
+                <button onclick="addNewBook()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-medium">Eseri ve Nüshayı Kaydet</button>
+            </div>
+
+        </section>
+    </main>
+
+    <footer class="bg-white border-t mt-8 py-4 text-center text-xs text-slate-500">
+        KütüphaneNet · Go 1.22+ & PostgreSQL 16 · DDO Case Kodu: KAYIN-2f0121
+    </footer>
 
     <script>
         const API = 'http://localhost:8080';
 
-        async function checkHealth() {
-            try {
-                const response = await fetch(`${API}/health`);
-                const data = await response.json();
-                document.getElementById('result').innerText = `API: ${data.status} | Veritabanı: ${data.db}`;
-            } catch (error) {
-                document.getElementById('result').innerText = "API'ye ulaşılamadı!";
+        function notify(msg, type = 'info') {
+            const box = document.getElementById('alertBox');
+            const txt = document.getElementById('alertText');
+            box.classList.remove('hidden', 'bg-emerald-50', 'text-emerald-800', 'border-emerald-300', 'bg-rose-50', 'text-rose-800', 'border-rose-300', 'bg-indigo-50', 'text-indigo-800', 'border-indigo-300');
+            if (type === 'success') box.classList.add('bg-emerald-50', 'text-emerald-800', 'border-emerald-300');
+            else if (type === 'error') box.classList.add('bg-rose-50', 'text-rose-800', 'border-rose-300');
+            else box.classList.add('bg-indigo-50', 'text-indigo-800', 'border-indigo-300');
+            txt.textContent = msg;
+        }
+
+        // Rol tabanlı ekran yetkilendirmesi (Bölüm 4)
+        function applyRoleView() {
+            const role = document.getElementById('roleSwitcher').value;
+            const pLoan = document.getElementById('panelLoan');
+            const pInv = document.getElementById('panelInventory');
+            const pCat = document.getElementById('panelCatalogAdd');
+
+            if (role === 'ogrenci' || role === 'akademisyen') {
+                pLoan.classList.add('hidden');
+                pInv.classList.add('hidden');
+                pCat.classList.add('hidden');
+                notify(`Üye (${role}) görünümü aktif: Katalog tarama ve rezervasyon kuyruğu işlemleri açık.`, 'info');
+            } else if (role === 'satinalma') {
+                pLoan.classList.add('hidden');
+                pInv.classList.add('hidden');
+                pCat.classList.remove('hidden');
+                notify('Satın Alma Sorumlusu görünümü aktif: Yeni eser ve envanter giriş paneli açık.', 'info');
+            } else {
+                pLoan.classList.remove('hidden');
+                pInv.classList.remove('hidden');
+                pCat.classList.remove('hidden');
+                notify(`Yetkili (${role}) görünümü aktif: Tüm ödünç, ceza, envanter ve katalog panelleri açık.`, 'success');
             }
+        }
+
+        async function checkHealthAndSummary() {
+            const badge = document.getElementById('healthBadge');
+            try {
+                const res = await fetch(`${API}/health`);
+                const ddoToken = res.headers.get('X-DDO-Token');
+                const data = await res.json();
+                badge.className = 'text-xs px-2.5 py-1 rounded-full bg-emerald-900 text-emerald-200 border border-emerald-600';
+                badge.textContent = `API: ${data.status.toUpperCase()} | DB: ${data.db.toUpperCase()} ${ddoToken ? '| Token: ' + ddoToken : ''}`;
+            } catch (e) {
+                badge.className = 'text-xs px-2.5 py-1 rounded-full bg-rose-900 text-rose-200 border border-rose-600';
+                badge.textContent = 'API Bağlantı Hatası!';
+            }
+
+            try {
+                const sRes = await fetch(`${API}/api/reports/summary`);
+                if (sRes.ok) {
+                    const s = await sRes.json();
+                    document.getElementById('repBooks').textContent = s.total_books ?? 0;
+                    document.getElementById('repUsers').textContent = s.total_users ?? 0;
+                    document.getElementById('repLoans').textContent = s.active_loans ?? 0;
+                    document.getElementById('repRes').textContent = s.active_reservations ?? 0;
+                    const kurus = s.total_fines_kurus ?? 0;
+                    document.getElementById('repFines').textContent = `${kurus} kr (${(kurus / 100).toFixed(2)} ₺)`;
+                }
+            } catch (_) {}
+        }
+
+        function renderBooks(books, label) {
+            const statusEl = document.getElementById('searchStatus');
+            const gridEl = document.getElementById('bookGrid');
+            if (!books || books.length === 0) {
+                statusEl.textContent = 'Sonuç bulunamadı (Boş durum). Farklı bir anahtar kelime deneyin.';
+                gridEl.innerHTML = `<div class="col-span-2 text-center py-6 text-slate-400 text-sm border border-dashed rounded-lg">Kriterlere uygun eser kaydı bulunamadı.</div>`;
+                return;
+            }
+            statusEl.textContent = `${label}: ${books.length} eser listeleniyor.`;
+            gridEl.innerHTML = books.map(b => `
+                <div class="border border-slate-200 rounded-lg p-3.5 hover:border-indigo-300 transition flex justify-between items-start bg-slate-50/50">
+                    <div>
+                        <div class="font-bold text-sm text-slate-900">#${b.id} · ${b.title}</div>
+                        <div class="text-xs text-slate-600 mt-0.5">Yazar: <b>${b.author}</b> · ISBN: ${b.isbn || '-'}</div>
+                        <span class="inline-block mt-2 text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded font-medium">${b.subject || 'Genel'}</span>
+                    </div>
+                    <button onclick="prefillReservation(${b.id})" class="text-xs bg-amber-100 hover:bg-amber-200 text-amber-900 px-2.5 py-1 rounded font-medium">Rezerve Et</button>
+                </div>
+            `).join('');
         }
 
         async function searchBooks() {
-            const q = document.getElementById('searchInput').value;
-            const listEl = document.getElementById('bookList');
-            listEl.innerHTML = 'Aranıyor...';
+            const q = document.getElementById('searchInput').value.trim();
+            const statusEl = document.getElementById('searchStatus');
+            const gridEl = document.getElementById('bookGrid');
+            if (!q) {
+                notify('Lütfen arama kutusuna bir kelime yazın.', 'error');
+                return;
+            }
+            statusEl.textContent = 'Yükleniyor... PostgreSQL GIN indeksi taranıyor...';
+            gridEl.innerHTML = '';
             try {
+                const t0 = performance.now();
                 const res = await fetch(`${API}/api/books/search?q=${encodeURIComponent(q)}`);
+                const elapsed = Math.round(performance.now() - t0);
                 const data = await res.json();
-                if (!data.books || data.books.length === 0) {
-                    listEl.innerHTML = 'Eşleşen kitap bulunamadı.';
-                    return;
-                }
-                listEl.innerHTML = data.books.map(b =>
-                    `<div style="padding:8px; border-bottom:1px solid #eee;">
-                        <b>${b.title}</b> — ${b.author} <span class="badge">${b.subject || 'Genel'}</span> <small>(ISBN: ${b.isbn})</small>
-                    </div>`
-                ).join('');
+                if (!res.ok) throw new Error(data.error?.message || 'Arama hatası');
+                renderBooks(data.books, `"${q}" araması (${elapsed} ms)`);
             } catch (e) {
-                listEl.innerHTML = 'Arama hatası oluştu.';
+                statusEl.textContent = 'Hata oluştu.';
+                notify(e.message, 'error');
             }
         }
 
-        async function borrowBook() {
-            const user_id = Number(document.getElementById('userId').value);
-            const barcode = document.getElementById('barcode').value;
-            const out = document.getElementById('loanResult');
+        function quickSearch(term) {
+            document.getElementById('searchInput').value = term;
+            searchBooks();
+        }
+
+        async function loadAllBooks() {
+            const statusEl = document.getElementById('searchStatus');
+            statusEl.textContent = 'Tüm katalog yükleniyor...';
+            try {
+                const res = await fetch(`${API}/api/books`);
+                const data = await res.json();
+                renderBooks(data.books, 'Tüm Katalog');
+            } catch (e) {
+                notify('Katalog listesi alınamadı.', 'error');
+            }
+        }
+
+        function prefillReservation(bookId) {
+            document.getElementById('resBookId').value = bookId;
+            createReservation();
+        }
+
+        async function borrowCopy() {
+            const user_id = Number(document.getElementById('loanUserId').value);
+            const barcode = document.getElementById('loanBarcode').value.trim();
+            notify('Ödünç işlemi işleniyor...', 'info');
             try {
                 const res = await fetch(`${API}/api/loans`, {
                     method: 'POST',
@@ -85,17 +326,86 @@
                     body: JSON.stringify({user_id, barcode})
                 });
                 const data = await res.json();
-                if (!res.ok) {
-                    out.innerText = 'Hata: ' + (data.error?.message || 'İşlem başarısız');
-                } else {
-                    out.innerText = `Başarıyla ödünç verildi! Kayıt No: #${data.loan_id}`;
-                }
+                if (!res.ok) throw new Error(data.error?.message || 'Ödünç verilemedi');
+                document.getElementById('returnLoanId').value = data.loan_id;
+                notify(`Başarılı! Barkod (${barcode}) Üye #${user_id} için ödünç verildi. Ödünç Kayıt No (Loan ID): #${data.loan_id}`, 'success');
+                checkHealthAndSummary();
             } catch (e) {
-                out.innerText = 'Sunucu bağlantı hatası.';
+                notify(`Ödünç Engellendi: ${e.message}`, 'error');
             }
         }
 
-        checkHealth();
+        async function returnCopy() {
+            const loanId = Number(document.getElementById('returnLoanId').value);
+            try {
+                const res = await fetch(`${API}/api/loans/${loanId}/return`, {method: 'POST'});
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error?.message || 'İade hatası');
+                notify(`İade Tamamlandı (#${loanId})! Hesaplanan Ceza: ${data.fine_amount} Kuruş | Yeni Nüsha Durumu: ${data.copy_status}`, 'success');
+                checkHealthAndSummary();
+            } catch (e) {
+                notify(`İade Hatası: ${e.message}`, 'error');
+            }
+        }
+
+        async function createReservation() {
+            const book_id = Number(document.getElementById('resBookId').value);
+            const user_id = Number(document.getElementById('resUserId').value);
+            try {
+                const res = await fetch(`${API}/api/reservations`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({book_id, user_id})
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error?.message || 'Rezervasyon hatası');
+                notify(`Rezervasyon Kuyruğuna Eklendi! Kayıt No: #${data.reservation_id} (Durum: ${data.status})`, 'success');
+                checkHealthAndSummary();
+            } catch (e) {
+                notify(e.message, 'error');
+            }
+        }
+
+        async function changeCopyStatus() {
+            const copyId = Number(document.getElementById('statusCopyId').value);
+            const status = document.getElementById('statusSelect').value;
+            try {
+                const res = await fetch(`${API}/api/copies/${copyId}/status`, {
+                    method: 'PATCH',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({status})
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error?.message || 'Geçersiz durum geçişi');
+                notify(`Nüsha #${copyId} durumu güncellendi: ${data.old_status} ➔ ${data.new_status}`, 'success');
+            } catch (e) {
+                notify(`Durum Makinesi Reddetti (409 Conflict): ${e.message}`, 'error');
+            }
+        }
+
+        async function addNewBook() {
+            const title = document.getElementById('newTitle').value.trim();
+            const author = document.getElementById('newAuthor').value.trim();
+            const subject = document.getElementById('newSubject').value.trim();
+            const isbn = document.getElementById('newIsbn').value.trim();
+            const barcode = document.getElementById('newBarcode').value.trim();
+            try {
+                const res = await fetch(`${API}/api/books`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({title, author, subject, isbn, barcode})
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error?.message || 'Kitap eklenemedi');
+                notify(`Yeni eser kataloğa eklendi (ID: #${data.book_id})!`, 'success');
+                checkHealthAndSummary();
+                loadAllBooks();
+            } catch (e) {
+                notify(e.message, 'error');
+            }
+        }
+
+        checkHealthAndSummary();
         searchBooks();
     </script>
 </body>
