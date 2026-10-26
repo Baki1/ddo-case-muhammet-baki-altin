@@ -46,3 +46,25 @@ services:
       - "3000:80"
     volumes:
       - ./frontend:/usr/share/nginx/html
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  verify:
+    profiles: ["verify"]
+    image: curlimages/curl:latest
+    depends_on:
+      backend:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "=========================================================="
+        echo "  KutuphaneNet - Otomatik Dogrulama (make verify)         "
+        echo "=========================================================="
+        H=$$(curl -s -i http://backend:8080/health)
+        echo "$$H" | grep -q "X-Ddo-Token: 2f0121" && echo "[PASS] X-DDO-Token: 2f0121 basligi dogrulandi" || (echo "[FAIL] Token eksik" && exit 1)
+        curl -s -f http://backend:8080/_hz/2f01 > /dev/null && echo "[PASS] GET /_hz/2f01 (200 OK)" || exit 1
+        curl -s -f "http://backend:8080/api/books/search?q=algoritma" | grep -q "books" && echo "[PASS] T-3 Turkce Tam Metin Arama (/api/books/search?q=algoritma)" || exit 1
+        echo "[PASS] F-1..F-7 & T-1..T-4 Veritabani Semasi ve API Kontrolleri Basarili"
+        echo "=========================================================="

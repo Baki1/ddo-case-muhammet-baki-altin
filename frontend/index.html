@@ -5,30 +5,98 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KütüphaneNet - DDO Case</title>
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f9; }
-        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        h1 { color: #333; }
+        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f9; color: #222; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 24px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+        .card { border: 1px solid #e2e8f0; border-radius: 6px; padding: 14px; margin-top: 14px; background: #fafafa; }
+        input, button { padding: 8px 12px; border-radius: 4px; border: 1px solid #cbd5e1; font-size: 14px; }
+        button { background-color: #2563eb; color: white; border: none; cursor: pointer; }
+        button:hover { background-color: #1d4ed8; }
+        .badge { display: inline-block; padding: 3px 8px; background: #dbeafe; color: #1e40af; border-radius: 4px; font-size: 12px; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>KütüphaneNet Yönetim Paneli</h1>
-        <p>Sistem API'sine başarıyla bağlandınız. Veritabanı ve sunucu aktif.</p>
-        <button onclick="checkHealth()">Sistem Durumunu Kontrol Et</button>
-        <p id="result"></p>
+        <p>Üniversite Kütüphane Katalog, Tam Metin Arama ve Ödünç Sistemi</p>
+
+        <div class="card">
+            <button onclick="checkHealth()">Sistem ve Veritabanı Durumunu Kontrol Et</button>
+            <span id="result" style="margin-left:10px; font-weight:bold;"></span>
+        </div>
+
+        <div class="card">
+            <h3>Türkçe Tam Metin Kitap Arama (T-3)</h3>
+            <input id="searchInput" type="text" value="algoritma" placeholder="Başlık, yazar veya konu ara..." style="width: 65%;">
+            <button onclick="searchBooks()">Katalogda Ara</button>
+            <div id="bookList" style="margin-top: 12px;"></div>
+        </div>
+
+        <div class="card">
+            <h3>Hızlı Ödünç Verme (T-1)</h3>
+            <input id="userId" type="number" value="2" placeholder="Üye ID" style="width: 100px;">
+            <input id="barcode" type="text" value="BC-1001" placeholder="Barkod (Örn: BC-1001)">
+            <button onclick="borrowBook()">Ödünç Ver</button>
+            <div id="loanResult" style="margin-top: 8px; font-size: 14px;"></div>
+        </div>
     </div>
 
     <script>
+        const API = 'http://localhost:8080';
+
         async function checkHealth() {
             try {
-                // API'mize istek atıyoruz
-                const response = await fetch('http://localhost:8080/health');
+                const response = await fetch(`${API}/health`);
                 const data = await response.json();
-                document.getElementById('result').innerText = "API Durumu: " + data.status;
+                document.getElementById('result').innerText = `API: ${data.status} | Veritabanı: ${data.db}`;
             } catch (error) {
                 document.getElementById('result').innerText = "API'ye ulaşılamadı!";
             }
         }
+
+        async function searchBooks() {
+            const q = document.getElementById('searchInput').value;
+            const listEl = document.getElementById('bookList');
+            listEl.innerHTML = 'Aranıyor...';
+            try {
+                const res = await fetch(`${API}/api/books/search?q=${encodeURIComponent(q)}`);
+                const data = await res.json();
+                if (!data.books || data.books.length === 0) {
+                    listEl.innerHTML = 'Eşleşen kitap bulunamadı.';
+                    return;
+                }
+                listEl.innerHTML = data.books.map(b =>
+                    `<div style="padding:8px; border-bottom:1px solid #eee;">
+                        <b>${b.title}</b> — ${b.author} <span class="badge">${b.subject || 'Genel'}</span> <small>(ISBN: ${b.isbn})</small>
+                    </div>`
+                ).join('');
+            } catch (e) {
+                listEl.innerHTML = 'Arama hatası oluştu.';
+            }
+        }
+
+        async function borrowBook() {
+            const user_id = Number(document.getElementById('userId').value);
+            const barcode = document.getElementById('barcode').value;
+            const out = document.getElementById('loanResult');
+            try {
+                const res = await fetch(`${API}/api/loans`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({user_id, barcode})
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    out.innerText = 'Hata: ' + (data.error?.message || 'İşlem başarısız');
+                } else {
+                    out.innerText = `Başarıyla ödünç verildi! Kayıt No: #${data.loan_id}`;
+                }
+            } catch (e) {
+                out.innerText = 'Sunucu bağlantı hatası.';
+            }
+        }
+
+        checkHealth();
+        searchBooks();
     </script>
 </body>
 </html>
